@@ -1,0 +1,253 @@
+---
+title: "09. Supervised Learning - Ensemble Methods"
+author: "Liah Cha"
+date: "June 28, 2017"
+output: html_document
+---
+
+## Instability
+- 꼭 Decisin Tree에 쓰라는 법은 없지만, DT에 사용했을때 효과가 가장 좋음 - DT의 단점(Instability, 불안정성)
+    + 데이터가 약간만 변해도 DT가 완전히 바뀔 수 있음
+    + 즉 DT의 모양이 자주 바뀜 -> 변동성이 큼 -> 분산이 크다(High Variance)
+    + bias는 작다 (training 데이터의 에러는 작은 편이다, overfitting 할 수 있기 때문)
+    + accuracy 측면에서는 분산이 작아야 좋음
+    
+- High variance, Low bias
+    + DT는 분산이 크나, bias는 작음
+- High bias, Low variance
+    + LR은 분산은 작으나(변동성이 적음), bias는 클 수 있음
+
+#### Variance in classification
+- For a fixed classification method, if a new data set (size N) is sampled,
+- The learned classifier f will be different
+- The variance measures the sensitivity of f to changes in the training set
+- variance decreases with N
+- variance increases with complexity (high for overfitted models)
+
+#### Bias in classification
+- When the classifier *f* is too simple it cannot fit the data well, no matter which *f* we choose
+- Buas cab be
+    + Deterministic (hard): no *f* fits the data
+    + Stochastic (soft): the probability of learning an *f* that fits the data is very small
+
+## Two types of classifier
+- Unstable Classifiers
+    + Decision, Trees, Neural Network 
+- Stable Classifiers
+    +Low variance, relatively high bias
+
+
+안정적(variance도 낮고)이면서도 bias도 낮은것
+-> 미래 데이터에 대한 accuracy가 가장 정확할 것
+
+- Ensemble : DT의 variance를 낮추기 위함 
+
+variance(x) = $\sigma^{2}$
+variance($\bar{X}$ = $\frac{\sigma^{2}}{n}$)
+
+여러개 DT 성과들의 평균
+
+#### Combining multipe models
+-
+-
+-
+-
+bagging, boosting, random forest
+
+## Bagging
+- 최소 50개 많게는 100개의 DT를 만들어냄 
+- training data를 purturb 시켜(약간 변형시켜) 만들어냄 : Bootstrap으로
+    + 재추출 (with replacement) : 뽑힌놈이 또 뽑힐수도 있음 
+    + 즉, sampling w/replacement
+    + Bootstrap을 최소 50번 해줌 -> Bootstrap data를 50개-100개 만들어 줌 
+    
+    
+#### 앙상블 성공요건
+1) 100개의 트리가 다양해야 함 (다양성) --> Bagging
+    + 트리의 결과가 비슷비슷하면 다수결 할 필요도 없음
+2) 100개의 트리가 정확해야 함 (정확성) 
+  
+- Random Forest(현존하는 3대 정확한 기법중 하나) : Bagging 을 기반으로 함
+    
+##### Bagging: approximate the margin
+
+
+## Example : German Credit 
+- (독일 신용 데이터)
+|변수 | 변수의 내용|
+|:-----:|:----------|
+|Check|Account balance (no account, none,<200DM, >=200DM)|
+|...|...|
+|**Y**|**Creditability (bad, good)**|
+
+```{r}
+### Ensemble ###
+setwd("C:/DMdata")
+german = read.table("germandata.txt",header=T) 
+german$numcredits = factor(german$numcredits)
+german$residence = factor(german$residence)
+german$residpeople = factor(german$residpeople)
+summary(german)
+#install.packages("adabag",repos="http://healthstat.snu.ac.kr/CRAN/")
+
+##### Bagging
+library(rpart)
+library(adabag)
+library(pROC)
+set.seed(1234) #bootstrap을 위해 필수 
+#xval=0 ; cross-validation 안함-즉 pruning을 안함-> bagging에서는 tree 사이즈 큰 것이 좋음 (training data 정확도를 높이기 위해)
+#minsplit => node크기 5까지 
+#maxdepth => 깊이 10까지
+my.control <- rpart.control(xval=0, cp=0, minsplit=5, maxdepth=10)
+
+# mfinal => 트리를 몇개 만들 것인지 크기 (voting을 위해 홀수가 좋음, 동점이 나면 random하게 함 )
+bag.german <- bagging(y ~ ., data = german, mfinal=50, control=my.control)
+summary(bag.german)
+print(bag.german$importance)
+importanceplot(bag.german)
+head(bag.german$votes) #50개 각각의 투표 결과 
+#head(bag.german$class)
+```
+
+
+```{r}
+# test data는 다른 것을 써줘야함 (여기서는 우선 german으로 활용)
+pred.bag.german <- predict.bagging(bag.german, newdata=german)
+head(pred.bag.german$prob,10)
+print(pred.bag.german$confusion) # confusion matrix
+1-sum(diag(pred.bag.german$confusion))/sum(pred.bag.german$confusion)
+evol.german=errorevol(bag.german, newdata=german)
+plot.errorevol(evol.german)
+```
+
+-  tree의 갯수에 따라 error가 줄어드는 것을 볼 수 있음 
+
+```{r}
+#####Fitting by training data and validating by test data
+set.seed(1234)
+i = sample(1:nrow(german), round(nrow(german)*0.7)) #70% for training data, 30% for testdata
+german.train = german[i,] 
+german.test = german[-i,]
+my.control <- rpart.control(xval=0, cp=0, minsplit=5, maxdepth=10)
+bag.train.german <- bagging(y ~ ., data = german.train, mfinal=50, control=my.control)
+pred.bag.german <- predict.bagging(bag.train.german, newdata=german.test)
+print(pred.bag.german$confusion)
+1-sum(diag(pred.bag.german$confusion))/sum(pred.bag.german$confusion)
+head(pred.bag.german$prob)
+roccurve <- roc(german.test$y ~ pred.bag.german$prob[,1])
+plot(roccurve)
+auc(roccurve)
+```
+
+
+## Random Forest
+1. Bootstrap 100-200 반복 => Tree 생성 
+2. (Bagging 과의 차이점 ) Tree의 다양성 
+     + 원래 데이터의 변수=[X1, X2, .... , X100] 
+     + 모든 node마다 동일하게 Greedy search로 분할하는 것은 동일하나,
+     + random 하게 변수를 추려 부분집합을 만들어서 진행함 
+     + 즉, 변수의 부분집합을 추려서 (예:[X2, X7, ... , X99]) Greedy Search로 분할함 <br/>
+     => Bagging 의 트리보다 월등히 많이 다양하게 됨. 즉 트리가 굉장히 다양해짐 
+
+- Bagging 과 아주 유사하지만, 각 Tree의 정확성은 유지되면서 다양성이 더 많이 확보됨
+    + -> Tree를 만들어내는 단계에서 randomness 가 들어감 (변수 선택할때)
+    + 앙상블 성공요건인 "다양성" "정확성"을 모두 갖춤
+
+- 
+
+```{r}
+
+##### Random Forest
+install.packages("randomForest",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(randomForest)
+set.seed(1234)
+rf.german <- randomForest(y ~ ., data = german, ntree=100, mtry=5, 
+importance=T, na.action=na.omit) # missing value 허용 안하게 짜놓은 package임 
+summary(rf.german)
+importance(rf.german, type=1) # variable selection으로 쓸 수 있음 
+pred.rf.german <- predict(rf.german, newdata=german)
+head(pred.rf.german,10)
+tab=table(german$y,pred.rf.german, dnn=c("Actual","Predicted"))
+print(tab)
+1-sum(diag(tab))/sum(tab)
+```
+
+#### OOB error
+- out-of-bag
+    + (n=100 가정) bootstrap을 하면 중복 추출이 된 것이 많음 
+    + 100개 중에 100개를 뽑을 때 재추출(중복 추출)을 허용하므로
+    + 63.2%가 unique한 관찰값이고 36.8%정도가 unique 한 데이터가 됨 (알려진 값)
+    + 이 37%를 OOB 데이터라고 함
+- 즉 bagging 이 100개라면, OOB도 100개임 
+- OOB 데이터로 테스트를 해보면 제3데이터 역할을 하므로(해당 tree 만들때 포함되지 않았기 때문에) TEST데이터로 활용해본 것 
+
+```{r}
+### default로 OOB 데이터의 error를 보여줌 
+plot(rf.german,type="l")
+#####Fitting by training data and validating by test data
+set.seed(1234)
+i = sample(1:nrow(german), round(nrow(german)*0.7)) #70% for training data, 30% for testdata
+german.train = german[i,] 
+german.test = german[-i,]
+rf.train.german <- randomForest(y ~ ., data = german.train, ntree=100, mtry=5, 
+importance=T, na.action=na.omit)
+pred.rf.german <- predict(rf.train.german, newdata=german.test)
+tab=table(german.test$y,pred.rf.german, dnn=c("Actual","Predicted"))
+print(tab)
+1-sum(diag(tab))/sum(tab)
+prob.rf.german <- predict(rf.train.german, newdata=german.test, type="prob")
+head(prob.rf.german)
+roccurve <- roc(german.test$y ~ prob.rf.german[,1])
+plot(roccurve)
+auc(roccurve)
+
+```
+
+## Boosting
+- bootstrap을 사용하지 않는 방법
+- 데이터 가중치 변형에 의한 트리 생성 
+- Training 데이터에서 오분류된 것의 가중치를 변경함 
+    + 전체 가중치 합이 1이 되어야 하니까, 나머지 데이터의 가중치가 줄어듬 
+- Greedy 서치를 할때 가중치를 반영한 서치를 함 
+- 직전 단계에서 error가 있었던 데이터의 가중치를 키워줌 (나머지는 줄이고)
+- 가중치 변형을 할때마다 Tree를 생성함 
+-> 목적은 동일함 100개의 다양한 트리를 생성함 
+
+## Adaboost 
+- Boosting이 알고리즘 방법이라면 구현한 package를 Adaboost라 할 수 있음
+
+```{r}
+##### Boosting
+library(rpart)
+library(adabag)
+set.seed(1234)
+# maxdepth=1; 한번만 split 한 Tree
+# 가중치의 값에 영향을 주기때문, mxdepth=2,3정도가 좋음 
+my.control <- rpart.control(xval=0, cp=0, maxdepth=1)  
+# mfinal=100, 트리의 갯수는 100개 
+boo.german <- boosting(y ~ ., data = german, boos=T, mfinal=100, control=my.control)
+summary(boo.german)
+boo.german$trees
+print(boo.german$importance)
+importanceplot(boo.german)
+pred.boo.german <- predict.boosting(boo.german, newdata=german)
+head(pred.boo.german$prob,10)
+print(pred.boo.german$confusion)
+1-sum(diag(pred.boo.german$confusion))/sum(pred.boo.german$confusion)
+evol.german=errorevol(boo.german, newdata=german)
+plot.errorevol(evol.german)
+#####Fitting by training data and validating by test data
+set.seed(1234)
+i = sample(1:nrow(german), round(nrow(german)*0.7)) #70% for training data, 30% for testdata
+german.train = german[i,] 
+german.test = german[-i,]
+my.control <- rpart.control(xval=0, cp=0, maxdepth=1)
+boo.train.german <- boosting(y ~ ., data = german.train, boos=T, mfinal=100, control=my.control)
+pred.boo.german <- predict.boosting(boo.train.german, newdata=german.test)
+print(pred.boo.german$confusion)
+1-sum(diag(pred.boo.german$confusion))/sum(pred.boo.german$confusion)
+head(pred.boo.german$prob)
+roccurve <- roc(german.test$y ~ pred.boo.german$prob[,1])
+plot(roccurve)
+auc(roccurve)
+```

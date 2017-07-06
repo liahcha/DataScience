@@ -1,0 +1,331 @@
+---
+title: "Mini Project"
+author: "Liah Cha"
+date: 'July 5, 2017'
+output: html_document
+---
+
+<br/>
+
+#### German Credit 데이터를 이용하여 아래의 요건에 맞는 작업을 수행하시오.
+
+https://archive.ics.uci.edu/ml/datasets/Statlog+(German+Credit+Data) 
+
+#### 1. 데이터를 6:4의 비율로 training:test 데이터로 분할하시오.seed 번호는 본인 생년월일 6자리를 사용
+
+```{r}
+german <- read.table('./DMdata/germandata.txt', header=T)
+#head(german)
+# check       - Status of existing checking account                 1 (categorical: A11 ~ A14)
+# duration    - duration in month                                   2 (numerical)
+# history     - credit history                                      3 (categorical: A30 ~ A34)
+# purpose     - car, education ...etc                               4 (categorical: A40 ~ A49,A410)
+# credit      - credit amount                                       5 (numerical)
+# savings     - account/bonds                                       6 (categorical : A61 ~ A65)
+# employment  - present employment since                            7 (categorical : A71 ~ A75)
+# installment - installment rate in percentage of disposable income 8 (numerical)
+# personal    - personal status and sex                             9 (categorical : A91 ~ A95)
+# debtors     - other debtors / guarantors                         10 (categorical : A101 ~ A103)
+# residence   - present residence since                            11 (numerical)
+# property    - property                                           12 (categorical : A121 ~ A124)
+# age         - age in years                                       13 (numerical)
+# others      - other installment plans                            14 (categorical : A141 ~ A143)
+# housing     - housing type                                       15 (categorical : A151 ~ A153)
+# numcredits  - number of existing credits at this bank            16 (numerical)
+# job         - job type                                           17 (categorical : A171 ~ A174) 
+# residpeople - number of people being liable to provide maintenance for 18 (numerical)
+# telephone   - y/n                                                19 (categorical : A191, A192)
+# foreign     - foreign worker y/n                                 20 (categorical : A201, A202)
+# y           - good / bad                                         21 (categorical)
+#print(paste0('numerical values : duration, credit, installment, residence, age, numcredits, residpeople'))
+
+print(paste0('Number of all samples: ', nrow(german)))
+
+german.new = subset(german, select=c(check,duration,history,credit, savings, installment, personal, property, age, housing, numcredits, job, residpeople, y))
+
+#check A11~A14
+check_A11 = as.numeric(german.new$credit=='A11')
+check_A12 = as.numeric(german.new$credit=='A12')
+check_A13 = as.numeric(german.new$credit=='A13')
+
+# history A30~A34
+history_A30 = as.numeric(german.new$history=='A30')
+history_A31 = as.numeric(german.new$history=='A31')
+history_A32 = as.numeric(german.new$history=='A32')
+history_A33 = as.numeric(german.new$history=='A33')
+
+# savings A61~A65
+savings_A61 = as.numeric(german.new$savings=='A61')
+savings_A62 = as.numeric(german.new$savings=='A62')
+savings_A63 = as.numeric(german.new$savings=='A63')
+savings_A64 = as.numeric(german.new$savings=='A64')
+
+# personal A91~A95
+personal_A91 = as.numeric(german.new$personal=='A91')
+personal_A92 = as.numeric(german.new$personal=='A92')
+personal_A93 = as.numeric(german.new$personal=='A93')
+personal_A94 = as.numeric(german.new$personal=='A94')
+
+# property A121~A124
+property_A121 = as.numeric(german.new$property=='A121')
+property_A122 = as.numeric(german.new$property=='A122')
+property_A123 = as.numeric(german.new$property=='A123')
+
+# housing A151~A153
+housing_A151 = as.numeric(german.new$housing=='A151')
+housing_A152 = as.numeric(german.new$housing=='A152')
+
+# job A171~A174
+job_A171 = as.numeric(german.new$job=='A171')
+job_A172 = as.numeric(german.new$job=='A172')
+job_A173 = as.numeric(german.new$job=='A173')
+
+german.new <-  cbind(german.new,
+                     check_A11, check_A12, check_A13,
+                     history_A30, history_A31, history_A32, history_A33,
+                     savings_A61, savings_A62, savings_A63, savings_A64,
+                     personal_A91, personal_A92, personal_A93, personal_A94,
+                     property_A121, property_A122, property_A123,
+                     housing_A151, housing_A152,
+                     job_A171, job_A172, job_A173)
+german.new <- subset(german.new, select=-check)
+german.new <- subset(german.new, select=-history)
+german.new <- subset(german.new, select=-savings)
+german.new <- subset(german.new, select=-personal)
+german.new <- subset(german.new, select=-property)
+german.new <- subset(german.new, select=-housing)
+german.new <- subset(german.new, select=-job)
+german.new$y = as.numeric(as.character(german.new$y)=="good")
+head(german.new)
+
+german.n <- german.new
+nor = function(x) {(x-min(x) / (max(x)-min(x)))}
+german.n$duration <- nor(german.n$duration)
+german.n$installment <- nor(german.n$installment)
+german.n$age <- nor(german.n$age)
+german.n$numcredits <- nor(german.n$numcredits)
+german.n$residpeople <- nor(german.n$residpeople)
+#german.n$y <- as.factor(german.n$y)
+
+#german.1f <- german
+#german.1f$y = as.numeric(as.character(german.1f$y)=="good")
+
+german.f <- german
+german.f$residence <- as.factor(german.f$residence)
+german.f$numcredits <- as.factor(german.f$numcredits)
+german.f$residpeople <- as.factor(german.f$residpeople)
+
+# seed number
+set.seed(830523)
+
+cnt <- round(nrow(german)*0.6)
+idx <- sample(nrow(german), size=cnt, replace=FALSE)
+
+
+german.train <- german.new[idx, ] # Training data for LR
+german.test <- german.new[-idx, ] # Test data for LR
+
+german.n.train <- german.n[idx, ] # Training data for NN
+german.n.test <- german.n[-idx, ] # Test data for NN
+
+german.all.train <- german[idx, ] # Training data for DT, RF, SVM
+german.all.test <- german[-idx, ] # Test data for DT, RF, SVM
+
+german.f.train <- german.f[idx, ] # Training data for BAG, BOOST
+german.f.test <- german.f[-idx, ] # Test data for BAG, BOOAT
+
+
+print(paste0('Number of train samples: ', nrow(german.train)))
+print(paste0('Nuber of test samples: ', nrow(german.test)))
+```
+
+<br/>
+<hr/>
+<br/>
+
+#### 2. Training 데이터를 이용하여 다음의 분석 모델을 구축하시오
+
+(단, 모델에 대한 옵션은 자유 선택이 가능함)
+
+- Logistic Regression
+- Neural Network
+- Decision Tree
+- Bagging
+- Boosting
+- Random Forest
+- SVM
+
+#### 3. Test 데이터를 이용하여 위 7개의 모델들의 예측 확률을 구하고, 이를 이용하여 ROC 곡선과 AUROC 값을 구하시오
+
+<hr/>
+
+### 1) Logistic Regression
+
+```{r}
+#install.packages("pROC")
+library(pROC)
+y.actual <- german.test$y #good=1
+
+## Logistic Regression
+LR <- glm(y~., data=german.train, family=binomial())
+summary(LR)
+LR.step <- step(LR, direction='both')
+summary(LR.step)
+
+## LR
+LR.prob <- predict(LR.step, newdata = german.test, type='response')
+LR.pred <- as.numeric(LR.prob > 0.6)
+conf.matrix = table(y.actual, LR.pred)
+conf.matrix = table(y.actual, LR.pred)
+conf.matrix[,2]/sum(conf.matrix[,2])
+exp(coef(LR.step))
+
+LR.roccurve <- roc(y.actual~LR.pred)
+plot(LR.roccurve)
+LR.AUROC <- auc(LR.roccurve)
+LR.AUROC
+```
+
+<br/><br/>
+
+### 2) Neural Network
+
+```{r}
+#install.packages("nnet")
+library(nnet)
+#library(neuralnet)
+#NN <- neuralnet(y~., data=german.n,train, hidden=10, threshold = 0.01, steptmax = 100000, act.fct='logistic', err.fct="ce", linear.output=F) 
+NN <- neuralnet(y ~ duration + credit + installment + age +  history_A30 + history_A31 + history_A32 + history_A33 + savings_A61 + personal_A91 + personal_A92 + property_A121 + property_A123 + housing_A151, 
+                data=german.n,train, hidden=10, threshold = 0.01, steptmax = 100000, act.fct='logistic', err.fct="ce", linear.output=F) 
+#NN <- nnet(y ~ ., data = german.n.train, size = 10, rang = 0.01, decay = 0, maxit = 1000)
+summary(NN)
+
+NN.prob <- predict(NN, newdata = german.n.test, type='raw')
+NN.pred <- as.numeric(NN.prob[,1] > 0.6)
+#NN.pred <- as.numeric(NN.prob)
+NN.roccurve <- roc(y.actual~NN.pred)
+plot(NN.roccurve)
+NN.AUROC <- auc(NN.roccurve)
+NN.AUROC
+```
+
+<br/><br/>
+
+### 3) Decision Tree
+
+```{r}
+## Decision Tree
+library(rpart)
+dt.control <- rpart.control(xval=10, cp=0, minsplit=100)
+DT <- rpart(y~., data = german.all.train, method="class", control = dt.control)
+summary(DT)
+  
+
+DT.prob <- predict(DT, newdata=german.all.test, type="prob")
+DT.pred <- DT.prob[,2]
+DT.roccurve <- roc(y.actual~DT.pred)
+plot(DT.roccurve)
+DT.AUROC <- auc(DT.roccurve)
+DT.AUROC
+```
+
+<br/><br/>
+
+### 4) Bagging
+
+```{r}
+## Bagging
+#install.packages("adabag")
+library(adabag)
+bag.control <- rpart.control(xval=0, cp=0, minsplit=5, maxdepth=10)
+BAG <- bagging(y~., data = german.f.train, mfinal=50, control = bag.control)
+summary(BAG)
+
+BAG.prob <-predict.bagging(BAG, newdata = german.f.test)
+BAG.pred <- BAG.prob$prob[,2]
+BAG.roccurve <- roc(y.actual~BAG.pred)
+plot(BAG.roccurve)
+BAG.AUROC <- auc(BAG.roccurve)
+BAG.AUROC
+```
+
+<br/><br/>
+
+### 5) Boosting
+
+```{r}
+## Boosting
+boo.control <- rpart.control(xval=0, cp=0, maxdepth=1)
+BOOST <- boosting(y~., data = german.all.train, boost= T, mfinal=100, control=boo.control)
+summary(BOOST)
+
+#BOOST$importance
+BOOST.prob <- predict.boosting(BOOST, newdata=german.all.test)
+BOOST.pred <- BOOST.prob$prob[,2]
+BOOST.roccurve <- roc(y.actual~BOOST.pred)
+plot(BOOST.roccurve)
+BOOST.AUROC <- auc(BOOST.roccurve)
+BOOST.AUROC
+```
+
+<br/><br/>
+
+### 6) Random Forest
+
+``` {r}
+## Random Forest
+#install.packages("randomForest")
+library(randomForest)
+RF <- randomForest(y~., data=german.all.train, ntree=100, mtry=5, importance=T, na.action=na.omit)
+summary(RF)
+
+#importance(RF, type=1)  
+RF.prob <- predict(RF, newdata=german.all.test, type="prob")
+RF.pred <- RF.prob[,2]
+RF.roccurve <- roc(y.actual~RF.pred)
+plot(RF.roccurve)
+RF.AUROC <-auc(RF.roccurve)
+RF.AUROC
+```
+
+<br/><br/>
+
+### 7) Support Vector Machine
+
+``` {r}
+## SVM
+#install.packages("e1071")
+library(e1071)
+SVM <- svm(y~., data=german.all.train, probability=T)
+summary(SVM)
+
+SVM.prob <- predict(SVM, newdata=german.all.test, probability=T)
+SVM.pred <- attr(SVM.prob, "probabilities")[,1]
+SVM.roccurve <- roc(y.actual~SVM.pred)
+plot(SVM.roccurve)
+SVM.AUROC <-auc(SVM.roccurve)
+SVM.AUROC
+
+```
+
+<br/>
+<hr/>
+<br/>
+
+#### 4. 위 7개 모델 중 최고의 예측정확도를 갖는 모델은 무엇인지 밝히시오.
+
+``` {r}
+## AUROC comparison
+auroc.all <- data.frame('Logistic Regression' = LR.AUROC, 
+                        'Neural Network' = NN.AUROC, 
+                        'Decision Tree' = DT.AUROC, 
+                        'Bagging' = BAG.AUROC, 
+                        'Boosting' = BOOST.AUROC, 
+                        'Random Forest' = RF.AUROC, 
+                        'SVM' = SVM.AUROC)
+auroc.all <- sort(auroc.all, decreasing=TRUE)
+auroc.all 
+print(paste0('BEST performance : ', as.character(names(auroc.all[1])), ' model'))
+
+```
+

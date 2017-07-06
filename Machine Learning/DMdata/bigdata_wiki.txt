@@ -1,0 +1,16 @@
+Big data usually includes data sets with sizes beyond the ability of commonly used software tools to capture, curate, manage, and process data within a tolerable elapsed time.[15] Big data "size" is a constantly moving target, as of 2012 ranging from a few dozen terabytes to many petabytes of data. Big data is a set of techniques and technologies that require new forms of integration to uncover large hidden values from large datasets that are diverse, complex, and of a massive scale.[16]
+ 
+In a 2001 research report[17] and related lectures, META Group (now Gartner) analyst Doug Laney defined data growth challenges and opportunities as being three-dimensional, i.e. increasing volume (amount of data), velocity (speed of data in and out), and variety (range of data types and sources). Gartner, and now much of the industry, continue to use this "3Vs" model for describing big data.[18] In 2012, Gartner updated its definition as follows: "Big data is high volume, high velocity, and/or high variety information assets that require new forms of processing to enable enhanced decision making, insight discovery and process optimization."[19] Additionally, a new V "Veracity" is added by some organizations to describe it.[20]
+ 
+Gartner¡¯s definition of the 3Vs is still widely used, and in agreement with a consensual definition that states that "Big Data represents the Information assets characterized by such a High Volume, Velocity and Variety to require specific Technology and Analytical Methods for its transformation into Value".[21] The 3Vs have been expanded to other complementary characteristics of big data:[22][23]
+ Volume: big data doesn't sample. It just observes and tracks what happens
+ Velocity: big data is often available in real-time
+ Variety: big data draws from text, images, audio, video; plus it completes missing pieces through data fusion
+ Machine Learning: big data often doesn't ask why and simply detects patterns[24]
+ Digital footprint: big data is often a cost-free byproduct of digital interaction[23]
+ 
+The growing maturity of the concept fosters a more sound difference between big data and Business Intelligence, regarding data and their use:[25]
+ Business Intelligence uses descriptive statistics with data with high information density to measure things, detect trends etc.;
+ Big data uses inductive statistics and concepts from nonlinear system identification [26] to infer laws (regressions, nonlinear relationships, and causal effects) from large sets of data with low information density[27] to reveal relationships, dependencies and perform predictions of outcomes and behaviors.[26][28]
+ 
+In a popular tutorial article published in IEEE Access Journal,[29] the authors classified existing definitions of big data into three categories, namely, Attribute Definition, Comparative Definition and Architectural Definition. The authors also presented a big-data technology map that illustrates the key technology evolution for big data.

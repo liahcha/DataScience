@@ -1,0 +1,752 @@
+### Dummy variable ### 
+install.packages("dummies", repos="http://healthstat.snu.ac.kr/CRAN/")
+library(dummies)
+data( iris )
+head(iris, 10)
+d <- dummy.data.frame( iris )
+head(d)
+iris$Ind1 <- as.numeric(iris$Species == 'setosa')
+iris$Ind2 <- as.numeric(iris$Species == 'versicolor')
+head(iris)
+
+install.packages("Hmisc", repos="http://cran.nexr.com")
+library(Hmisc)
+age <- c(1,2,NA,4)
+age.i <- impute(age)
+# Could have used impute(age,2.5), impute(age,mean), impute(age,"random")
+age.i
+summary(age.i)
+is.imputed(age.i)
+
+
+### HMEQ data ### 
+setwd("c:/DMdata")
+hmeq<-read.table("hmeq.txt",header=T,sep='\t')
+head(hmeq,10)
+levels(hmeq$REASON)[levels(hmeq$REASON)==""]<-NA
+levels(hmeq$JOB)[levels(hmeq$JOB)==""]<-NA
+head(hmeq,10)
+hmeq$BAD<-factor(hmeq$BAD)
+class(hmeq$BAD)
+
+hist(hmeq$VALUE)
+boxplot(hmeq$VALUE)
+hmeq$logVALUE=log(hmeq$VALUE)
+hist(hmeq$logVALUE)
+
+## 기초 R 함수 ##
+table(hmeq$REASON, hmeq$JOB)
+with(hmeq, table(REASON, JOB))
+with(hmeq, table(REASON, JOB, useNA = "ifany"))
+with(hmeq, table(REASON, JOB, exclude = "Other"))
+chisq.test(table(hmeq$REASON, hmeq$BAD))
+mosaicplot(~BAD+REASON, data=hmeq)
+
+plot(hmeq$JOB)
+pie(table(hmeq$JOB))
+plot(hmeq$BAD,hmeq$DEBTINC, subset=hmeq$DEBTINC<75)
+plot(~BAD+DEBTINC, subset=DEBTINC<75, data=hmeq)
+
+hist(hmeq$VALUE, breaks=50, freq=F, xlim=c(8000,300000))
+lines(density(hmeq$VALUE, na.rm=T), col='blue')
+
+plot(~LOAN+VALUE+MORTDUE+YOJ+DEBTINC, data=hmeq, cex=0.1) # default size = 1
+plot(~LOAN+VALUE+MORTDUE+YOJ+DEBTINC, data=hmeq, cex=0.1, subset = VALUE<300000, main="VALUE < 300000")
+plot(~LOAN+VALUE+MORTDUE+YOJ+DEBTINC, data=hmeq, cex=0.1, subset = VALUE<300000, log=1:3, main="Log scale")
+#log=1:3 ==> make 1:3 variables to log scale
+
+require(MASS)
+color=rep('green',nrow(hmeq))
+color[hmeq$BAD==1]='red'
+parcoord(hmeq[,c('LOAN','VALUE','MORTDUE','CLAGE','DEBTINC')],col=color,lwd=0.001,lty=3)
+stars(hmeq[1:18,c('LOAN','VALUE','MORTDUE','CLAGE','DEBTINC')],col.stars=hmeq$BAD,key.loc=c(11, 2),ncol=5)
+
+
+### Regression ###
+### Used Car Data ###
+setwd("c:/DMdata")
+usedcar<-read.table('usedcar.csv',header=T, sep=',')
+Ind1<-as.numeric(usedcar$Color == 'white')
+Ind2<-as.numeric(usedcar$Color == 'silver')
+lm_used<-lm(Price ~ Odometer + Ind1 + Ind2, data=usedcar)
+summary(lm_used)
+step_used<-step(lm_used, direction='both')
+summary(step_used)
+plot(Price~Odometer,data=usedcar,col=ifelse(usedcar$Color=='silver','black','red'))
+lines(x <- c(19000,49300), y=16740-0.05533*x)    
+text(40000, 15300, "y=16988.9-0.05533*x")
+lines(x <- c(19000,49300), y=16988.9-0.05533*x, lty=3)    
+text(31000, 14500, "y=16740-0.05533*x")
+
+int_used<-lm(Price ~ Odometer+Ind1+Ind2+Ind1:Odometer+Ind2:Odometer, data=usedcar)
+summary(int_used) ## interaction effect
+step_used<-step(int_used,direction='both')
+summary(step_used) ## interaction effect
+plot(Price~Odometer,data=usedcar,col=
+ifelse(usedcar$Color=='silver','black',ifelse(usedcar$Color=='white','red','green')))
+lines(x <- c(19000,49300), y=17218-0.06235*x)    
+text(38000, 15300, "y=17218-0.06235*x")
+lines(x <- c(19000,49300), y=16267.9-0.04165*x, lty=3)    
+text(25000, 14900, "y=16267.9-0.04165*x")
+lines(x <- c(19000,49300), y=16960-0.06235*x, lty=4)    
+text(42000, 14000, "y=16960-0.06235*x")
+plot(step_used, which=1) ## fitted values vs. residuals
+plot(step_used, which=2) ## QQ plot
+
+### Wage Data ###
+setwd("c:/DMdata")
+wage<-read.table('wage.csv',header=T, sep=',')
+head(wage,10)
+table(wage$알바)
+table(wage$데이트)
+table(wage$회비)
+lm_wage<-lm(용돈 ~ 거주이동 + 알바 + 데이트 + 회비, data=wage)
+summary(lm_wage) # R2=0.3288
+plot(lm_wage, which=1)
+
+wage$i알바 <- as.numeric(wage$알바 > 0)
+wage$i데이트 <- as.numeric(wage$데이트 > 0)
+wage$i회비 <- as.numeric(wage$회비 > 0)
+head(wage,10)
+lm_wage2<-lm(용돈 ~ 거주이동 + 알바 + 데이트 + 회비 + i알바 + i데이트 + i회비, data=wage)
+summary(lm_wage2) # R2=0.3563
+plot(lm_wage2, which=1)
+
+
+### Logistic Regression ###
+### Buytest Data ###
+setwd("C:/DMdata")
+buytest = read.table('buytest.txt',sep='\t',header=T)
+head(buytest,10)
+full_m = glm(RESPOND~AGE+BUY12+BUY18+BUY6+CLIMATE+FICO+INCOME+MARRIED+OWNHOME+SEX,
+             family=binomial(),data=buytest)
+summary(full_m)
+back_m = step(full_m) #direction='backward' is default
+summary(back_m)
+prob_pred = predict(back_m, newdata=buytest, type='response', na.action=na.omit) ## predicted probability
+head(prob_pred,20)
+y_actual = na.omit(buytest)$RESPOND
+table(y_actual)
+table(y_actual)/sum(table(y_actual))
+y_pred = as.numeric(prob_pred > 0.05)
+tab=table(y_actual, y_pred)
+print(tab)
+tab[,2]
+tab[,2]/sum(tab[,2])
+exp(coef(back_m)) ## odds ratio
+
+
+### Model Evaluation ###
+#####Fitting by training data and validating by test data
+setwd("C:/DMdata")
+buytest = read.table('buytest.txt',sep='\t',header=T)
+head(buytest)
+set.seed(1234)
+i = sample(1:nrow(buytest), round(nrow(buytest)*0.7)) #70% for training data, 30% for testdata
+train = buytest[i,] 
+test = buytest[-i,]
+
+### 모형평가 ###
+train=na.omit(train)
+test=na.omit(test)
+model1 = glm(RESPOND~AGE+BUY12+BUY18+FICO+MARRIED+OWNHOME,family=binomial(),data=train)
+model2 = glm(RESPOND~AGE+FICO+MARRIED+OWNHOME,family=binomial(),data=train)
+summary(model1)
+summary(model2)
+prob_pred1 = predict(model1, newdata=test, type='response') ## predicted probability
+prob_pred2 = predict(model2, newdata=test, type='response') ## predicted probability
+y_pred1 = as.numeric(prob_pred1 > 0.1)
+tab1=table(test$RESPOND, y_pred1)
+print(tab1)
+sum(diag(tab1))/sum(tab1)
+y_pred2 = as.numeric(prob_pred2 > 0.1)
+tab2=table(test$RESPOND, y_pred2)
+print(tab2)
+sum(diag(tab2))/sum(tab2)
+
+### Lift Chart ###
+scored_dat = cbind(prob_pred1,test$RESPOND)
+head(scored_dat)
+head(scored_dat[order(-prob_pred1),],30)
+
+install.packages("BCA",repos="http://healthstat.snu.ac.kr/CRAN/")
+install.packages("munsell",dependencies=TRUE,repos="http://healthstat.snu.ac.kr/CRAN/")
+library(BCA)
+layout(matrix(c(1,2), 2, 1))
+test$RESPOND=factor(test$RESPOND)
+lift.chart(c("model1","model2"), data=test, targLevel="1",
+    trueResp=0.07, type="incremental", sub="Test")
+lift.chart(c("model1","model2"), data=test, targLevel="1",
+    trueResp=0.07, type="cumulative", sub="Test")
+
+### ROC커브 생성 ###
+install.packages("pROC",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(pROC)
+roccurve1 <- roc(test$RESPOND ~ prob_pred1)
+plot(roccurve1)
+auc(roccurve1)
+roccurve2 <- roc(test$RESPOND ~ prob_pred2)
+plot(roccurve2)
+auc(roccurve2)
+
+### K-S 검정 ###
+ks.test(prob_pred1[test$RESPOND==1], prob_pred1[test$RESPOND==0])
+ks.test(prob_pred2[test$RESPOND==1], prob_pred2[test$RESPOND==0])
+
+
+### Neural Network ###
+setwd("C:/DMdata")
+buytest = read.table('buytest.txt',sep='\t',header=T)
+head(buytest,10)
+complete=complete.cases(buytest[,c("RESPOND","AGE","FICO","BUY18")])
+buytest1<-buytest[complete,]
+nrow(buytest1)
+nor = function(x) {(x-min(x))/(max(x)-min(x))}
+buytest1$AGE <- nor(buytest1$AGE)
+buytest1$FICO <- nor(buytest1$FICO)
+buytest1$BUY18 <- nor(buytest1$BUY18)
+
+set.seed(1234)
+i = sample(1:nrow(buytest1), round(nrow(buytest1)*0.5)) #50% for training data, 30% for testdata
+train = buytest1[i,] 
+test = buytest1[-i,]
+nrow(train)
+nrow(test)
+
+install.packages("neuralnet",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(neuralnet)
+
+set.seed(1234)
+nn1<-neuralnet(RESPOND~AGE+FICO+BUY18, data=train, hidden=3,
+stepmax = 1e+04, threshold = 0.01, act.fct='logistic', linear.output=F) 
+summary(nn1)
+print(nn1$weights)
+head(nn1$net.result[[1]])
+plot(nn1)
+
+set.seed(1234)
+nn2<-neuralnet(RESPOND~AGE+FICO+BUY18,data=train, hidden=c(3,3),
+stepmax = 1e+04, threshold = 0.01, act.fct='logistic', linear.output=F) 
+plot(nn2)
+
+pred1<-compute(nn1,covariate=test[,c("AGE","FICO","BUY18")])  ## 예측치
+head(pred1$net.result,10)
+pred2<-compute(nn2,covariate=test[,c("AGE","FICO","BUY18")])  ## 예측치
+head(pred2$net.result,10)
+
+library(pROC)
+roccurve1 <- roc(test$RESPOND ~ as.vector(pred1$net.result))
+plot(roccurve1)
+auc(roccurve1)
+roccurve2 <- roc(test$RESPOND ~ as.vector(pred2$net.result))
+plot(roccurve2)
+auc(roccurve2)
+
+logit1 = glm(RESPOND~AGE+FICO+BUY18,family=binomial(),data=train)
+prob_pred1 = predict(logit1, newdata=test, type='response') ## predicted probability
+roccurve3 <- roc(test$RESPOND ~ prob_pred1)
+plot(roccurve3)
+auc(roccurve3)
+
+
+### Decision Trees ###
+setwd("c:/DMdata")
+hmeq<-read.table("hmeq.txt",header=T,sep='\t')
+head(hmeq,10)
+levels(hmeq$REASON)[levels(hmeq$REASON)==""]<-NA
+levels(hmeq$JOB)[levels(hmeq$JOB)==""]<-NA
+head(hmeq,10)
+hmeq$BAD<-factor(hmeq$BAD)
+class(hmeq$BAD)
+
+library(rpart)
+set.seed(1234)
+my.control <- rpart.control(xval=10, cp=0, minsplit=100)
+D_tree <- rpart(BAD ~ ., data = hmeq, method="class", control=my.control)
+print(D_tree)
+plot(D_tree, uniform=T, compress=T, margin=0.05)
+
+printcp(D_tree)
+plotcp(D_tree)
+D_tree.prun <- prune(D_tree, cp = 0.008)
+print(D_tree.prun)
+plot(D_tree.prun, uniform=T, compress=T, margin=0.05)
+text(D_tree.prun, use.n=T, col="blue")
+summary(D_tree.prun)
+
+pred.hmeq <- predict(D_tree.prun, newdata=hmeq, type="class") 
+# type="prob" for class probability, type="vector" for regression
+tab=table(hmeq$BAD,pred.hmeq, dnn=c("Actual","Predicted"))
+print(tab)
+1-sum(diag(tab))/sum(tab)
+prob.hmeq <- predict(D_tree.prun, newdata=hmeq, type="prob") 
+head(prob.hmeq)
+roccurve <- roc(hmeq$BAD ~ prob.hmeq[,2])
+plot(roccurve)
+auc(roccurve)
+
+
+
+### Ensemble ###
+setwd("C:/DMdata")
+german = read.table("germandata.txt",header=T) 
+german$numcredits = factor(german$numcredits)
+german$residence = factor(german$residence)
+german$residpeople = factor(german$residpeople)
+summary(german)
+install.packages("adabag",repos="http://healthstat.snu.ac.kr/CRAN/")
+
+##### Bagging
+library(rpart)
+library(adabag)
+set.seed(1234)
+my.control <- rpart.control(xval=0, cp=0, minsplit=5, maxdepth=10)
+bag.german <- bagging(y ~ ., data = german, mfinal=50, control=my.control)
+summary(bag.german)
+print(bag.german$importance)
+importanceplot(bag.german)
+pred.bag.german <- predict.bagging(bag.german, newdata=german)
+head(pred.bag.german$prob,10)
+print(pred.bag.german$confusion)
+1-sum(diag(pred.bag.german$confusion))/sum(pred.bag.german$confusion)
+evol.german=errorevol(bag.german, newdata=german)
+plot.errorevol(evol.german)
+#####Fitting by training data and validating by test data
+set.seed(1234)
+i = sample(1:nrow(german), round(nrow(german)*0.7)) #70% for training data, 30% for testdata
+german.train = german[i,] 
+german.test = german[-i,]
+my.control <- rpart.control(xval=0, cp=0, minsplit=5, maxdepth=10)
+bag.train.german <- bagging(y ~ ., data = german.train, mfinal=50, control=my.control)
+pred.bag.german <- predict.bagging(bag.train.german, newdata=german.test)
+print(pred.bag.german$confusion)
+1-sum(diag(pred.bag.german$confusion))/sum(pred.bag.german$confusion)
+head(pred.bag.german$prob)
+roccurve <- roc(german.test$y ~ pred.bag.german$prob[,1])
+plot(roccurve)
+auc(roccurve)
+
+
+##### Boosting
+library(rpart)
+library(adabag)
+set.seed(1234)
+my.control <- rpart.control(xval=0, cp=0, maxdepth=1)
+boo.german <- boosting(y ~ ., data = german, boos=T, mfinal=100, control=my.control)
+summary(boo.german)
+boo.german$trees
+print(boo.german$importance)
+importanceplot(boo.german)
+pred.boo.german <- predict.boosting(boo.german, newdata=german)
+head(pred.boo.german$prob,10)
+print(pred.boo.german$confusion)
+1-sum(diag(pred.boo.german$confusion))/sum(pred.boo.german$confusion)
+evol.german=errorevol(boo.german, newdata=german)
+plot.errorevol(evol.german)
+#####Fitting by training data and validating by test data
+set.seed(1234)
+i = sample(1:nrow(german), round(nrow(german)*0.7)) #70% for training data, 30% for testdata
+german.train = german[i,] 
+german.test = german[-i,]
+my.control <- rpart.control(xval=0, cp=0, maxdepth=1)
+boo.train.german <- boosting(y ~ ., data = german.train, boos=T, mfinal=100, control=my.control)
+pred.boo.german <- predict.boosting(boo.train.german, newdata=german.test)
+print(pred.boo.german$confusion)
+1-sum(diag(pred.boo.german$confusion))/sum(pred.boo.german$confusion)
+head(pred.boo.german$prob)
+roccurve <- roc(german.test$y ~ pred.boo.german$prob[,1])
+plot(roccurve)
+auc(roccurve)
+
+
+##### Random Forest
+install.packages("randomForest",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(randomForest)
+set.seed(1234)
+rf.german <- randomForest(y ~ ., data = german, ntree=100, mtry=5, 
+importance=T, na.action=na.omit)
+summary(rf.german)
+importance(rf.german, type=1)
+pred.rf.german <- predict(rf.german, newdata=german)
+head(pred.rf.german,10)
+tab=table(german$y,pred.rf.german, dnn=c("Actual","Predicted"))
+print(tab)
+1-sum(diag(tab))/sum(tab)
+plot(rf.german,type="l")
+#####Fitting by training data and validating by test data
+set.seed(1234)
+i = sample(1:nrow(german), round(nrow(german)*0.7)) #70% for training data, 30% for testdata
+german.train = german[i,] 
+german.test = german[-i,]
+rf.train.german <- randomForest(y ~ ., data = german.train, ntree=100, mtry=5, 
+importance=T, na.action=na.omit)
+pred.rf.german <- predict(rf.train.german, newdata=german.test)
+tab=table(german.test$y,pred.rf.german, dnn=c("Actual","Predicted"))
+print(tab)
+1-sum(diag(tab))/sum(tab)
+prob.rf.german <- predict(rf.train.german, newdata=german.test, type="prob")
+head(prob.rf.german)
+roccurve <- roc(german.test$y ~ prob.rf.german[,1])
+plot(roccurve)
+auc(roccurve)
+
+
+### Support Vector Machine
+install.packages("e1071",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(e1071)
+setwd("C:/DMdata")
+
+german = read.table("germandata.txt",header=T) 
+german$numcredits = factor(german$numcredits)
+german$residence = factor(german$residence)
+german$residpeople = factor(german$residpeople)
+summary(german)
+SVM<-svm(y ~.,data=german,kernel="radial")
+#SVM<-svm(y ~.,data=german,kernel="linear")
+#SVM<-svm(y ~.,data=german,kernel="polynomial",degree=2)
+plot(SVM,german,duration~credit)
+## The previous command will produce a graph, 
+## in which support vectors are shown as 'X', 
+## true classes are highlighted through symbol color, 
+##and predicted class regions are visualized using colored background.
+boxplot(german$duration~german$y)
+boxplot(german$credit~german$y)
+summary(SVM)
+fitted(SVM) #fitted values for SVM
+#####Fitting by training data and validating by test data
+set.seed(1234)
+i = sample(1:nrow(german), round(nrow(german)*0.7)) #70% for training data, 30% for testdata
+german.train = german[i,] 
+german.test = german[-i,]
+svm.train.german <- svm(y ~ ., data = german.train)
+pred.svm.german <- predict(svm.train.german, newdata=german.test)
+tab=table(german.test$y,pred.svm.german, dnn=c("Actual","Predicted"))
+print(tab)
+1-sum(diag(tab))/sum(tab)
+
+svm.train.german <- svm(y ~ ., data = german.train, probability=T)
+prob.svm.german <- predict(svm.train.german, newdata=german.test, probability = T)
+prob.svm <- attr(prob.svm.german, "probabilities")
+head(prob.svm)
+roccurve <- roc(german.test$y ~ prob.svm[,1])
+plot(roccurve)
+auc(roccurve)
+
+
+### Hierarchical Clustering
+head(USArrests)
+summary(USArrests)
+
+install.packages("pls",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(pls)
+zUSArrests=stdize(as.matrix(USArrests))
+hc1=hclust(dist(zUSArrests),method="average")
+plot(hc1, hang = -1)
+rect.hclust(hc1, k=5)
+hcmember1 <- cutree(hc1, k=5)
+hcmember1
+cent <- NULL
+for (k in 1:5){
+   cent <- rbind(cent, colMeans(zUSArrests[hcmember1 == k, ,drop=FALSE]))
+}
+cent
+
+
+### K-means Clustering
+install.packages("pls",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(pls)
+zUSArrests=stdize(as.matrix(USArrests))
+set.seed(1234)
+kmc1 = kmeans(zUSArrests,4)
+kmc1
+pairs(zUSArrests, col=kmc1$cluster, pch=16)
+
+## Elbow point
+wss = 0
+for (i in 1:10) wss[i] = sum(kmeans(zUSArrests,center=i)$withinss)
+plot(1:10, wss, type='b', xlab="Number of Clusters", ylab="Within group sum of squares")
+
+
+### Dungaree Data
+setwd("C:/DMdata")
+dungaree = read.table('dungaree.csv',sep=',',header=T)
+head(dungaree,10)
+library(pls)
+zdungaree=stdize(as.matrix(dungaree))
+pairs(zdungaree[,-1])
+## transformation
+dungaree$fratio = with(dungaree, log(fashion/original))
+dungaree$lratio = with(dungaree, log(leisure/original))
+dungaree$sratio = with(dungaree, log(stretch/original))
+dungratio = dungaree[,c("fratio", "lratio", "sratio")]
+summary(dungratio)
+
+install.packages("rgl",repos="http://healthstat.snu.ac.kr/CRAN/")
+install.packages("httpuv",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(rgl)
+plot3d(dungratio[,1], dungratio[,2], dungratio[,3], col="blue", size=5) 
+x1 <- c(-2.7,-2.7,-5.5)
+x2 <- c(0,0,0)
+x3 <- c(-2,-5,-1.5)
+kcenters <- data.frame(x1,x2,x3)
+kmean_dung = kmeans(dungratio,centers=kcenters)
+kmean_dung
+pairs(dungratio, col=kmean_dung$cluster, pch=16)
+
+### K-medoids clustering
+install.packages("fpc",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(fpc)
+zUSArrests=stdize(as.matrix(USArrests))
+kmed = pamk(zUSArrests)
+kmed
+pairs(zUSArrests, col=kmed$pamobject$clustering, pch=16)
+layout(matrix(c(1,2),1,2))
+plot(kmed$pamobject)
+layout(matrix(1))
+
+kmed1 = pamk(zUSArrests,5)
+kmed1
+pairs(zUSArrests, col=kmed1$pamobject$clustering, pch=16)
+layout(matrix(c(1,2),1,2))
+plot(kmed1$pamobject)
+layout(matrix(1))
+
+## DBSCAN
+install.packages("fpc",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(fpc)
+dbs = dbscan(zUSArrests,eps=0.8)
+dbs
+pairs(zUSArrests, col=dbs$cluster+1, pch=16)
+
+
+
+### Association Rule
+install.packages("arules",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(arules)
+setwd("C:/DMdata")
+dvd.trans= read.transactions("dvdtrans.csv", 
+format="single", sep=",", cols=c("ID","Item"))
+summary(dvd.trans)
+image(dvd.trans)
+dvd.rules <- apriori(dvd.trans) 
+summary(dvd.rules)
+inspect(head(sort(dvd.rules, by ="lift"),10))
+
+install.packages("arulesViz",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(arulesViz)
+set.seed(1234)
+plot(dvd.rules)
+plot(dvd.rules, method="grouped")
+plot(dvd.rules, method="paracoord")
+plot(dvd.rules, method="graph")
+dvd.nrules <- apriori(dvd.trans, 
+parameter = list(supp = 0.5, conf = 0.8, maxlen=4, target = "rules"))
+summary(dvd.nrules)
+inspect(dvd.nrules)
+write(dvd.nrules, file = "rules.csv", sep = ",", col.names = NA)
+
+
+### Association Rule - drink.txt
+setwd("C:/DMdata")
+drink= read.transactions("drink.txt", format="basket", sep=",")
+summary(drink)
+drink.rules=apriori(drink)
+inspect(drink.rules)
+drink.nrules <- apriori(drink, 
+parameter = list(supp = 0.1, conf = 0.1,target = "rules"))
+inspect(head(sort(drink.nrules, by ="lift"),10))
+
+### Association Rule - Titanic
+setwd("C:/DMdata")
+titanic= read.transactions("titanic.csv", format="basket", sep=",")
+summary(titanic)
+titanic.rules=apriori(titanic)
+inspect(titanic.rules)
+titanic.nrules <- apriori(titanic,
+   parameter = list(minlen=2, supp=0.005, conf=0.8),
+   appearance = list(rhs=c("No", "Yes"),
+   default="lhs"))
+rules.sorted <- sort(titanic.nrules, by="lift")
+inspect(rules.sorted)
+library(arulesViz)
+plot(rules.sorted, method="graph")
+plot(rules.sorted, method="paracoord")
+
+### Association Rule - Building
+setwd("C:/DMdata")
+build <- read.csv("building.csv" , header = T)
+build[is.na(build)] <- 0  
+build <- build[-1]
+build 
+trans <- as.matrix(build , "Transaction")
+rules1 <- apriori(trans , parameter = list(supp=0.2 , conf = 0.6 , target = "rules"))
+inspect(sort(rules1, by ="lift"))
+plot(rules1, method="paracoord")
+plot(rules1, method="graph")
+rules2 <- subset(rules1 , subset = lhs %pin% '보습학원' & confidence > 0.7)
+inspect(sort(rules2)) 
+rules3 <- subset(rules1 , subset = rhs %pin% '편의점' & confidence > 0.7)
+inspect(sort(rules3)) 
+b2 <- t(as.matrix(build)) %*% as.matrix(build) 
+b2
+b2.w <- b2 - diag(diag(b2))
+b2.w
+install.packages("sna",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(sna)
+gplot(b2.w, displaylabel=T, vertex.cex=sqrt(diag(b2)), arrowhead.cex=0, edge.lwd = b2.w*2)
+
+
+
+### Text Mining
+## Bigdata_wiki data
+install.packages("tm",repos="http://healthstat.snu.ac.kr/CRAN/")
+install.packages("SnowballC",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(tm)
+library(SnowballC)
+setwd("C:/DMdata")
+bigdata=readLines("bigdata_wiki.txt")
+class(bigdata)
+bigdata
+str(bigdata)
+length(bigdata)
+nchar(bigdata)  
+bigdata=bigdata[nchar(bigdata)!=1] 
+#
+# Create Corpus
+cb=Corpus(VectorSource(bigdata))  
+class(cb)
+inspect(cb) #document 보기  ##
+cb[[11]][1] #cb내 11번째 원소(문서)의 내용(content)을 보여줌.
+#
+#tm 패키지에서 전처리 cleaning data를 위해서 사용가능한 명령문들 보기 
+getTransformations()
+cb=tm_map(cb, stripWhitespace) #공백(whitespace) 제거
+cb=tm_map(cb, removeNumbers) #숫자(number) 제거
+cb=tm_map(cb, removePunctuation) # 구두점(punctuation) (마침표(.), 콤마(,), 콜론(:), 세미콜론(:) 등) 제거
+#, ..., ?, !, ~, @, $, &, %, 마침표(.), 쉼표(,)등의 문장 부호 및 구두점 제거
+cb=tm_map(cb, tolower) # 소문자로 변환
+cb=tm_map(cb, removeWords, stopwords("en")) #불용어(stopwords) 제거
+## 영어 174개.  tm 패키지에 한글은 없음
+#Stopwords  추가 할 때 
+# mystopwords <- c(stopwords('en'), 'set','usually','three')
+# cb <- tm_map(cb, removeWords, mystopwords)
+inspect(cb)
+#
+# Stemming 
+cb=tm_map(cb, stemDocument) #  stemDocument(cb)
+(test <- stemDocument(c('material','materially','materialize','materialization','materialise','materiality')))
+#
+# Create Term Document matrix 
+tdm=TermDocumentMatrix(cb)
+## tdmr=TermDocumentMatrix(cb, control=list(wordLengths=c(2,6), bounds=list(global=c(3,12))))
+## 3 번째부터 12번째까지의 documents 중에서 단어길이가 2개에서6개까지의
+## 길이를 가진 단어들만 포함하라는 의미
+##
+inspect(tdm[1:5, 1:6])
+findFreqTerms(tdm, lowfreq=3) # 발생빈도
+findAssocs(tdm, "big", corlimit=0.5) #특정단어(big)와 상관성
+mb=as.matrix(tdm) # Term Document matrix를 Matrix로 변환
+sort(rowSums(mb), dec=T)[1:10] # 가장 많이 출현하는 단어 상위 10개
+wf=sort(rowSums(mb), dec=T)
+ff= subset(rowSums(mb), rowSums(mb) >=3) # 출현 빈도수가 3 이상인 단어만.
+barplot(sort(ff, dec=T),las=2) # las=2 는 X축 라벨이 X축과 수직, las=1은 X축과 평행
+#
+# word cloud
+install.packages("wordcloud",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(wordcloud)
+wordcloud(names(wf), wf, colors=brewer.pal(6, "Dark2"), random.order=F)
+#
+# Hierarchical clustering
+tdm_c=removeSparseTerms(tdm, sparse=0.85)
+m2=as.matrix(tdm_c)
+clus=hclust(dist(scale(m2)), method="ward.D")
+plot(clus, hang = -1)
+rect.hclust(clus, k=6)
+# Association Rule
+library(arules)
+rules2 <- apriori(t(m2) , parameter = list(supp=0.3 , conf = 0.6 , target = "rules"))
+inspect(sort(rules2, by ="lift"))
+library(arulesViz)
+plot(rules2, method="paracoord")
+
+
+## 빅데이터_위키 data
+install.packages("KoNLP",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(KoNLP)
+library(rJava)
+library(wordcloud)
+setwd("C:/DMdata")
+bd=readLines("빅데이터_위키.txt")
+class(bd) #character
+nchar(bd)
+bd=bd[nchar(bd)>2]
+bd
+#
+# 한글 사전
+useSejongDic()
+mergeUserDic(data.frame(c("테라바이트", "페타바이트", "가트너"), "ncn"))
+#"C:/Program Files/R/R-3.3.3/library/KoNLP_dic/current/
+# dic_user.txt"에 추가 
+# 명사 추출
+nbd=sapply(bd, extractNoun, USE.NAMES =F) 
+nbd # list이지만 각 원소는 문서이며 명사들로만 구성되어 있다.
+#
+# Term Document Matrix를 만들려면 여기서부터 tm의 Corpus 만들어야 함. 
+library(tm)
+cbd=Corpus(VectorSource(nbd))
+cbd
+inspect(cbd)
+#tm 패키지에서 전처리 cleaning data를 위해서 사용가능한 명령문들 보기 
+getTransformations()
+#
+cbd=tm_map(cbd, stripWhitespace) 
+#문서에 있는 여러개의 공백을 하나의 빈칸으로 변환
+cbd=tm_map(cbd, removeNumbers) #숫자(number) 제거
+cbd=tm_map(cbd, removePunctuation) 
+# 구두점(punctuation) (마침표(.), 콤마(,), 콜론(:), 세미콜론(:) 등) 제거
+#, ..., ?, !, ~, @, $, &, %, 마침표(.), 쉼표(,)등의 문장 부호 및 구두점 제거
+inspect(cbd)
+# 불용어
+mystopwords <- c(stopwords('en'), 'IBM','그','더그','등')
+cbd <- tm_map(cbd, removeWords, mystopwords)
+cbd[[9]][1]
+# gsub() 명령어
+# "이슈" 라는 명사를 제거하고자 할때
+cbd=tm_map(cbd,  function(x) {gsub("이슈", "", x)})
+# "속도" 라는 명사뒤에 나오는 모든 말을 "속도"로 변환
+cbd=tm_map(cbd,  function(x) {gsub("속도[[:alnum:]]*", "속도", x)})
+#"V을" 또는 "V를" 을 "V" 로 변환
+cbd=tm_map(cbd,  function(x) {gsub("V[을를]*", "V", x)})
+# 숫자를 제거하기
+cbd=tm_map(cbd,  function(x) {gsub("[1-9]", "", x)})
+#특수문자 또는 숫자 또는 영어 를 제거하고 한글만 남기기
+cbd=tm_map(cbd,  function(x) {gsub("[[:punct:]]|[[:digit:]]|[A-Za-z]", "", x)})
+cbd[[9]][1]
+#
+## Term Document Matrix
+tdm= TermDocumentMatrix(cbd)
+dim(tdm) #234  20
+inspect(tdm[1:5, 1:6])
+#
+# Term Document Matrix는 한글에 작동하지 않음
+# 대안: 아래의 방법 이용
+# 명사를 추출
+bd=readLines("빅데이터_위키.txt")
+class(bd) #character
+nchar(bd)
+bd=bd[nchar(bd)>2]
+nbd=sapply(bd, extractNoun, USE.NAMES =F) 
+nbd # list이지만 각 원소는 문서이며 명사들로만 구성되어 있다.
+vnbd=unlist(nbd)
+#특수문자 또는 숫자 또는 영어 를 제거하고 한글만 남기기
+vnbd2=gsub("[[:punct:]]|[[:digit:]]|[A-Za-z]", "", vnbd)
+vnbd2=vnbd2[nchar(vnbd2)>1]
+vnbd2
+# 명사 개수 세기
+wordcount <- table(vnbd2) 
+# 워드 클라우드
+pal <- brewer.pal(12,"Set3") 
+pal <- pal[-c(1:2)] 
+wordcloud(names(wordcount),freq=wordcount,random.order=F,colors=pal,
+scale=c(8,0.6),rot.per=0.3, min.freq=2)
+#scale 큰 글씨와 작은 글씨의 크기 ,rot.per 90도의 비율

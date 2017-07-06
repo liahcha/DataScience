@@ -1,0 +1,149 @@
+---
+title: "07. Supervised Learning - Neural Network"
+author: "Liah Cha"
+date: "June 27, 2017"
+output: html_document
+---
+
+## Neural Networks (NN)
+- AN algorithm for estimation or classification (비선형)
+- Magical and mysterious hype, but just a non-linear statistical model
+- Can be thought of as a generalization of regression (회귀분석의 일반화)
+- "Universal approximator" 범용근사기
+
+## Hidden Nodes
+- Hidden layer nodes
+
+- These nodes consists two parts
+    + Combination function (결합함수)
+    + Activation function (활성함수)
+    
+## Activation (Squashing) Function
+
+1) Sigmoid(logistic), hyperbolic tangent functions
+    + 미분가능함, 출력값 급격한 변화없는 S자 curve가 만들어짐 
+2) Simple functions: Linear, Threshold
+3) Gaussian function: RBF(Radial Basis Function) Network
+
+- 어떤 활성함수를 쓰느냐에 따라 결과가 많이 바뀌지는 않음 기본적으로 S자 커브이기 때문 
+
+#### Sigmoid Function
+
+#### Tanh Function
+
+## Output Layer Nodes
+
+## Mathematical formuation
+
+#### Training the Networks
+- W를 발견해내는 부분 : 목적함수(예측오차)를 최소화 시키는 기준
+- Training the NN menas finding a set of weights that minimize the predictive error for the records in the training set
+- Many numerical methods can be used for doing this; classical one called **back propagation(역전파)**
+- Back propagation recommends Quasi-Newton for medium size problems, conjugate gradient for large problems
+- All suffer from stopping at local minima; common fix is to select many random starting values and save the best solution
+    + 수렴하긴 하지만, global minimum이 아니라 local minimum 일 수 있음
+
+## Cost function (목적함수)
+
+<br/><br/>
+
+## Example : BUYTEST
+|범주 | 변수 | 변수의 내용|
+|-----|-----|-----|
+|인구속성|Age|나이(년)|
+||Income|년수입(1000$)|
+||Married|1:결혼, 0:미혼|
+||Sex|F:여자, M남자|
+||Ownhouse|1:소유, 0:미소유|
+|지역속성|Loc|거주지(A-H)|
+||Climate|거주지의 기온(10,20,30)|
+|거래회수|Buy6|최근 6개월 간의 구입회수|
+||Buy12|최근 12개월 간의 구입회수|
+||Buy18|최근 18개월 간의 구입회수|
+||Buy24|최근 24개월 간의 구입회수|
+|신용상태|Fico|신용점수|
+|거래속성|Orgsrc|고객분류(C,D,I,O,P,R,U)|
+||Discbuy|할인고객 여부(1:할인고객, 0)|
+||Return24|지난 24개월간 상품의 반품여부 (1:반품, 0)|
+|응답|Respond|광고메일에 응답여부(1:응답, 0)|
+||Purchtot|광고메일에 의한 구입총액|
+||C1-C7|광고메일에 의한 품목별 구입액|
+|고객번호|ID|고객번호|
+
+<br/><br/>
+
+```{r}
+### Neural Network ###
+buytest = read.table('./DMdata/buytest.txt',sep='\t',header=T)
+head(buytest,10)
+# Missing value가 하나라도 있으면 FALSE
+complete=complete.cases(buytest[,c("RESPOND","AGE","FICO","BUY18")])
+summary(complete) # complete 가 True 것으로만 분석 
+```
+
+```{r}
+buytest1<-buytest[complete,]
+nrow(buytest1)
+# nor = normalization min_max (0-1사이의 범위로 변환)
+nor = function(x) {(x-min(x))/(max(x)-min(x))}
+buytest1$AGE <- nor(buytest1$AGE)
+buytest1$FICO <- nor(buytest1$FICO)
+buytest1$BUY18 <- nor(buytest1$BUY18)
+
+# Training : Test = 5 : 5 로 분할 
+set.seed(1234)
+i = sample(1:nrow(buytest1), round(nrow(buytest1)*0.5)) #50% for training data, 30% for testdata
+train = buytest1[i,] 
+test = buytest1[-i,]
+#print0('Train: ', nrow(train), ', Test: ', nrow(test))
+
+```
+
+```{r}
+#install.packages("neuralnet",repos="http://healthstat.snu.ac.kr/CRAN/")
+library(neuralnet)
+
+set.seed(1234)
+# hidden=3, 은닉층의 갯수=3개
+# stepmax=10,000 iteration의 max 
+# iteration 10,000번해서 수렴 못시키면 포기해라
+# threshold = 0.01 : 값이 작을 수록 
+# act.fct = activation function 의 약어 = sigmoid'logistic'가 default 임
+# linear.output=F 출력노드를 activation 안함 (만약 T이면, 회귀분석)
+nn1<-neuralnet(RESPOND~AGE+FICO+BUY18, data=train, hidden=3,
+stepmax = 1e+04, threshold = 0.01, act.fct='logistic', linear.output=F) 
+summary(nn1)
+print(nn1$weights)
+head(nn1$net.result[[1]])
+plot(nn1)
+```
+
+```{r}
+# hidden=c(3,3) 은닉층은 2개, 층마다 3개의 은닉노드 
+set.seed(1234)
+nn2<-neuralnet(RESPOND~AGE+FICO+BUY18,data=train, hidden=c(3,3),
+stepmax = 1e+04, threshold = 0.01, act.fct='logistic', linear.output=F) 
+plot(nn2)
+```
+
+```{r}
+pred1<-compute(nn1,covariate=test[,c("AGE","FICO","BUY18")])  ## 예측치
+head(pred1$net.result,10)
+pred2<-compute(nn2,covariate=test[,c("AGE","FICO","BUY18")])  ## 예측치
+head(pred2$net.result,10)
+
+library(pROC)
+roccurve1 <- roc(test$RESPOND ~ as.vector(pred1$net.result))
+plot(roccurve1)
+auc(roccurve1)
+roccurve2 <- roc(test$RESPOND ~ as.vector(pred2$net.result))
+plot(roccurve2)
+auc(roccurve2)
+
+logit1 = glm(RESPOND~AGE+FICO+BUY18,family=binomial(),data=train)
+prob_pred1 = predict(logit1, newdata=test, type='response') ## predicted probability
+roccurve3 <- roc(test$RESPOND ~ prob_pred1)
+plot(roccurve3)
+auc(roccurve3)
+
+```
