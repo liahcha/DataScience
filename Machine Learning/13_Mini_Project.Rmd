@@ -96,19 +96,17 @@ german.new <- subset(german.new, select=-property)
 german.new <- subset(german.new, select=-housing)
 german.new <- subset(german.new, select=-job)
 german.new$y = as.numeric(as.character(german.new$y)=="good")
-head(german.new)
+#head(german.new)
 
-german.n <- german.new
+#german.n <- subset(german.new, select=c('duration', 'credit','installment','age',
+#                                        'history_A30','history_A31','history_A32','history_A33',
+#                                        'savings_A61','personal_A91','personal_A92',
+#                                        'property_A121','property_A123','housing_A151', 'y'))
+german.n <- subset(german.new, select=c('installment', 'history_A30','history_A31', 'history_A32',
+                                        'savings_A61','personal_A91', 'y'))
 nor = function(x) {(x-min(x) / (max(x)-min(x)))}
-german.n$duration <- nor(german.n$duration)
+#german.n$duration <- nor(german.n$duration)
 german.n$installment <- nor(german.n$installment)
-german.n$age <- nor(german.n$age)
-german.n$numcredits <- nor(german.n$numcredits)
-german.n$residpeople <- nor(german.n$residpeople)
-#german.n$y <- as.factor(german.n$y)
-
-#german.1f <- german
-#german.1f$y = as.numeric(as.character(german.1f$y)=="good")
 
 german.f <- german
 german.f$residence <- as.factor(german.f$residence)
@@ -116,7 +114,7 @@ german.f$numcredits <- as.factor(german.f$numcredits)
 german.f$residpeople <- as.factor(german.f$residpeople)
 
 # seed number
-set.seed(830523)
+set.seed(170705)
 
 cnt <- round(nrow(german)*0.6)
 idx <- sample(nrow(german), size=cnt, replace=FALSE)
@@ -168,8 +166,7 @@ y.actual <- german.test$y #good=1
 
 ## Logistic Regression
 LR <- glm(y~., data=german.train, family=binomial())
-summary(LR)
-LR.step <- step(LR, direction='both')
+LR.step <- step(LR, direction='both', trace=FALSE)
 summary(LR.step)
 
 ## LR
@@ -177,7 +174,7 @@ LR.prob <- predict(LR.step, newdata = german.test, type='response')
 LR.pred <- as.numeric(LR.prob > 0.6)
 conf.matrix = table(y.actual, LR.pred)
 conf.matrix = table(y.actual, LR.pred)
-conf.matrix[,2]/sum(conf.matrix[,2])
+#conf.matrix[,2]/sum(conf.matrix[,2])
 exp(coef(LR.step))
 
 LR.roccurve <- roc(y.actual~LR.pred)
@@ -191,18 +188,20 @@ LR.AUROC
 ### 2) Neural Network
 
 ```{r}
-#install.packages("nnet")
-library(nnet)
-#library(neuralnet)
-#NN <- neuralnet(y~., data=german.n,train, hidden=10, threshold = 0.01, steptmax = 100000, act.fct='logistic', err.fct="ce", linear.output=F) 
-NN <- neuralnet(y ~ duration + credit + installment + age +  history_A30 + history_A31 + history_A32 + history_A33 + savings_A61 + personal_A91 + personal_A92 + property_A121 + property_A123 + housing_A151, 
-                data=german.n,train, hidden=10, threshold = 0.01, steptmax = 100000, act.fct='logistic', err.fct="ce", linear.output=F) 
-#NN <- nnet(y ~ ., data = german.n.train, size = 10, rang = 0.01, decay = 0, maxit = 1000)
-summary(NN)
+## Neural Network
+library(neuralnet)
 
-NN.prob <- predict(NN, newdata = german.n.test, type='raw')
-NN.pred <- as.numeric(NN.prob[,1] > 0.6)
-#NN.pred <- as.numeric(NN.prob)
+#NN <- neuralnet(y ~ duration + credit + installment + age +  history_A30 + history_A31 + history_A32 + history_A33 + savings_A61 + personal_A91 + personal_A92 + property_A121 + property_A123 + housing_A151, 
+                #data=german.n.train, hidden=3, stepmax=10000, threshold = 0.01, act.fct='logistic', linear.output=F)
+
+NN <- neuralnet(y ~ installment +  history_A30 + history_A31 + history_A32 + savings_A61 + personal_A91, 
+                data=german.n.train, hidden=3, stepmax=100000, threshold = 0.01, act.fct='logistic', linear.output=F) 
+NN$weights
+#plot(NN)
+german.nn.test <- subset(german.n.test, select = -y)
+NN.prob <-compute(NN,covariate=german.nn.test)
+NN.pred <- as.numeric(NN.prob$net.result >0.6)
+
 NN.roccurve <- roc(y.actual~NN.pred)
 plot(NN.roccurve)
 NN.AUROC <- auc(NN.roccurve)
@@ -219,7 +218,6 @@ library(rpart)
 dt.control <- rpart.control(xval=10, cp=0, minsplit=100)
 DT <- rpart(y~., data = german.all.train, method="class", control = dt.control)
 summary(DT)
-  
 
 DT.prob <- predict(DT, newdata=german.all.test, type="prob")
 DT.pred <- DT.prob[,2]
@@ -325,7 +323,7 @@ auroc.all <- data.frame('Logistic Regression' = LR.AUROC,
                         'SVM' = SVM.AUROC)
 auroc.all <- sort(auroc.all, decreasing=TRUE)
 auroc.all 
-print(paste0('BEST performance : ', as.character(names(auroc.all[1])), ' model'))
+print(paste0('BEST performance : ', as.character(names(auroc.all[1])), ' !! '))
 
 ```
 
